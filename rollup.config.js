@@ -4,7 +4,7 @@ export default [
         output:
             [
                 {
-                    file: 'dist/data-modal.js',
+                    file: 'dist/igv-juicebox.js',
                     format: 'es'
                 },
             ]

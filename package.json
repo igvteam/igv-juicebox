@@ -1,7 +1,19 @@
 {
-  "name": "$name$",
-  "version": "$version$",
+  "name": "igv-juicebox",
+  "version": "0.0.1",
+  "files": [
+    "dist/**"
+  ],
+  "module": "dist/data-modal.js",
+  "scripts": {
+    "build": "npx rollup --config"
+  },
   "dependencies": {
-    $END$
+  },
+  "devDependencies": {
+    "data-modal": "github:igvteam/data-modal#v1.3.0",
+    "igv-utils": "github:igvteam/igv-utils#v1.3.14",
+    "igv-widgets": "github:igvteam/igv-widgets",
+    "rollup": "^2.77.2"
   }
 }

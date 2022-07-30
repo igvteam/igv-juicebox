@@ -1,112 +1,39 @@
 import {GenericDataSource, ModalTable} from '../node_modules/data-modal/dist/data-modal.js'
+import {encodeTrackDatasourceConfigurator, supportsGenome} from "./encodeTrackDatasourceConfigurator.js"
 
-// Hardcode map type for now
-// mapType = 'hic-contact-map-dropdown' === id ? 'contact-map' : 'control-map';
-const mapType = 'contact-map'
+let encodeModals = new Map()
 
-function createContactMapLoaders(hicBrowser, igvBrowser) {
-    const mapLoadHandler = async (url, name, mapType) => {
-        const isControl = ('control-map' === mapType)
-        if (!isControl) hicBrowser.reset()
-        await hicBrowser.loadHicFile({url, name, isControl})
+function configureTrackLoaders(hicBrowser, igvBrowser) {
 
-        const genomeID = hicBrowser.genome.id
-        if (genomeID !== igvBrowser.genome.id) {
-            await igvBrowser.loadSession({
-                genome: genomeID,
-                tracks:
-                    [{
-                        id: "jb-interactions",
-                        type: "interact",
-                        name: "Contacts",
-                        //color: "rgba(180, 25, 137, 0.05)",
-                        height: 125,
-                        features: [],   // ! Important, signals track that features will be supplied explicitly
-                        order: 10000  // Just above gene track
-                    }]
-            })
-        }
+    const loadHandler = async (configList) => {
+        await igvBrowser.loadTrackList(configList)
     }
 
-    configureAidenlabMapModal('hic-contact-map-modal', mapLoadHandler)
-    configureEncodeMapModal('hic-encode-hosted-contact-map-modal', mapLoadHandler)
-    configureFileInput('#contact-map-local', mapLoadHandler)
-    configureLoadURLModal('#hic-load-url-modal', mapLoadHandler)
+    configureEncodeModal({targetID: 'encode-signal-tracks-modal', type: 'signals', genomeID: "hg19"}, loadHandler)
+    configureEncodeModal({targetID: 'encode-other-tracks-modal', type: 'other', genomeID: "hg19"}, loadHandler)
+    configureFileInput('#track-file-input', loadHandler)
+    configureLoadURLModal('#track-load-url-modal', loadHandler)
 }
 
+function configureEncodeModal({targetID, type, genomeID}, loadHandler) {
 
-function configureAidenlabMapModal(targetID, loadHandler) {
-
-    const url = 'https://aidenlab.org/juicebox/res/hicfiles.json'
-
-    const config = {
-        url: url,
-        isJSON: true,
-        columns:
-            ['name', 'author', 'journal', 'year', 'organism', 'reference genome', 'cell type', 'experiment type', 'protocol'],
-
-        // Parser adds NVI parameter, if present,  to URL and insures that all columns have a value
-        parser: {
-            parse: str => {
-                return Object.entries(JSON.parse(str)).map(([url, obj]) => {
-                    obj['url'] = obj['NVI'] ? `${url}?nvi=${obj['NVI']}` : url
-                    for (let key of config.columns) {
-                        obj[key] = obj[key] || ''
-                    }
-                    return obj
-                })
-            }
-        }
-    }
-    const datasource = new GenericDataSource(config)
-
-    const modalTableConfig =
-        {
-            id: targetID,
-            title: 'Contact Map',
-            selectionStyle: 'single',
-            pageLength: 10,
-            okHandler: async ([selection]) => {
-                const {url, name} = selection
-                await loadHandler(url, name, mapType)
-            }
-        }
-    const contactMapModal = new ModalTable(modalTableConfig)
-    contactMapModal.setDatasource(datasource)
-}
-
-function configureEncodeMapModal(targetID, loadHandler) {
-
-    const encodeContactMapDatasourceConfiguration = {
-        url: 'https://s3.amazonaws.com/igv.org.app/encode/hic/hic.txt',
-        columns:
-            [
-                // 'HREF',
-                'Assembly',
-                'Biosample',
-                'Description',
-                'BioRep',
-                'TechRep',
-                'Lab',
-                'Accession',
-                'Experiment'
-            ],
-    }
-    const datasource = new GenericDataSource(encodeContactMapDatasourceConfiguration)
+    const datasource = (new GenericDataSource(encodeTrackDatasourceConfigurator(genomeID, type)))
 
     const encodeModalTableConfig =
         {
             id: targetID,
-            title: 'ENCODE Hosted Contact Map',
-            selectionStyle: 'single',
+            title: 'ENCODE',
+            selectionStyle: 'multiple',
             pageLength: 10,
-            okHandler: async ([{HREF, Description}]) => {
-                const urlPrefix = 'https://www.encodeproject.org'
-                const path = `${urlPrefix}${HREF}`
-                await loadHandler(path, Description, mapType)
+            okHandler: async (result) => {
+                if (result) {
+                    loadHandler(result)
+                }
             }
         }
-    new ModalTable(encodeModalTableConfig).setDatasource(datasource)
+    const modal = new ModalTable(encodeModalTableConfig)
+    modal.setDatasource(datasource)
+    encodeModals.set(type, modal)
 }
 
 function configureFileInput(inputID, loadHandler) {
@@ -117,8 +44,7 @@ function configureFileInput(inputID, loadHandler) {
         // NOTE:  this in the callback is a DOM element, jquery weirdness
         $(this).val("")
 
-        const {name} = file
-        await loadHandler(file, name, mapType)
+        loadHandler([{url: file, name: file.name}])
     })
 }
 
@@ -127,18 +53,35 @@ function configureLoadURLModal(id, loadHandler) {
     const $modal = $(id)
     $modal.find('input').on('change', function () {
 
-        const path = $(this).val()
+        const url = $(this).val()
         $(this).val("")
 
         $modal.modal('hide')
 
-        loadHandler(path)
+        loadHandler([{url}])
 
     })
 }
 
+function updateTracksForGenome(genomeID) {
 
-export {createContactMapLoaders}
+    for(let type of encodeModals.keys()) {
+        const modal = encodeModals.get(type)
+        if(supportsGenome(genomeID)) {
+            modal.setDatasource((new GenericDataSource(encodeTrackDatasourceConfigurator(genomeID, type))))
+        } else {
+            modal.setDatasource(EmptyTableDataSource)
+        }
+    }
+}
+
+
+const EmptyTableDataSource = {
+    tableColumns: async () => [],
+    tableData: async () => []
+}
+
+export {configureTrackLoaders, updateTracksForGenome}
 
 
 

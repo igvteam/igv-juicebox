@@ -1,120 +1,110 @@
 import {GenericDataSource, ModalTable} from '../node_modules/data-modal/dist/data-modal.js'
-import {FileUtils, GooglePicker} from '../node_modules/igv-utils/src/index.js';
-import {aidenLabContactMapDatasourceConfigurator} from './aidenLabContactMapDatasourceConfig.js'
-import {encodeContactMapDatasourceConfiguration} from "./encodeContactMapDatasourceConfig.js"
 
-let mapType = undefined;
-let encodeHostedContactMapModal;
-let contactMapModal;
+// Hardcode map type for now
+// mapType = 'hic-contact-map-dropdown' === id ? 'contact-map' : 'control-map';
+const mapType = 'contact-map'
 
-function configureContactMapLoaders({
-                                        rootContainer,
-                                        $dropdowns,
-                                        $localFileInputs,
-                                        urlLoadModalId,
-                                        dataModalId,
-                                        encodeHostedModalId,
-                                        $dropboxButtons,
-                                        $googleDriveButtons,
-                                        googleEnabled,
-                                        mapMenu,
-                                        loadHandler
-                                    }) {
+function configureContactMapLoaders(hicBrowser, igvBrowser, genomeCallback) {
 
-    $dropdowns.on('show.bs.dropdown', function () {
+    const mapLoadHandler = async (url, name, mapType) => {
 
-        // Contact or Control dropdown button
-        // NOTE:  this in the callback is a DOM element, jquery weirdness
-        const $child = $(this).children('.dropdown-toggle');
+        const isControl = ('control-map' === mapType)
+        if (!isControl) hicBrowser.reset()
+        await hicBrowser.loadHicFile({url, name, isControl})
 
-        // button id
-        const id = $child.attr('id');
+        const genomeID = hicBrowser.genome.id
+        if (genomeID !== igvBrowser.genome.id) {
 
-        // Set map type based on dropdown selected, this is a transient variable, set every time this callback
-        // is invoked.
-        mapType = 'hic-contact-map-dropdown' === id ? 'contact-map' : 'control-map';
+            genomeCallback(genomeID)
 
-    });
-
-    $localFileInputs.on('change', async function (e) {
-        const file = ($(this).get(0).files)[0];
-
-        // NOTE:  this in the callback is a DOM element, jquery weirdness
-        $(this).val("");
-
-        const {name} = file;
-        await loadHandler(file, name, mapType);
-    });
-
-    $dropboxButtons.on('click', function () {
-
-        const config =
-            {
-                success: async dbFiles => {
-                    const paths = dbFiles.map(dbFile => dbFile.link);
-                    const path = paths[0];
-                    const name = FileUtils.getFilename(path);
-                    await loadHandler(path, name, mapType);
-                },
-                cancel: () => {
-                },
-                linkType: 'preview',
-                multiselect: false,
-                folderselect: false,
-            };
-
-        Dropbox.choose(config);
-
-    });
-
-    if (googleEnabled) {
-        $googleDriveButtons.on('click', () => {
-
-            GooglePicker.createDropdownButtonPicker(true, async responses => {
-
-                const paths = responses.map(({name, url: google_url}) => {
-                    return {filename: name, name, google_url};
-                });
-
-                let {name, google_url: path} = paths[0];
-                await loadHandler(path, name, mapType);
-
+            await igvBrowser.loadSession({
+                genome: genomeID,
+                tracks:
+                    [{
+                        id: "jb-interactions",
+                        type: "interact",
+                        name: "Contacts",
+                        //color: "rgba(180, 25, 137, 0.05)",
+                        height: 125,
+                        features: [],   // ! Important, signals track that features will be supplied explicitly
+                        order: 10000  // Just above gene track
+                    }]
             })
-        })
-    } else {
-        $googleDriveButtons.parent().hide();
+
+
+
+        }
     }
 
-    appendAndConfigureLoadURLModal(rootContainer, urlLoadModalId, path => {
-        const name = FileUtils.getFilename(path);
-        loadHandler(path, name, mapType);
-    });
+    configureAidenlabMapModal('hic-contact-map-modal', mapLoadHandler)
+    configureEncodeMapModal('hic-encode-hosted-contact-map-modal', mapLoadHandler)
+    configureFileInput('#contact-map-local', mapLoadHandler)
+    configureLoadURLModal('#hic-load-url-modal', mapLoadHandler)
+}
 
-    if (mapMenu) {
 
-        const modalTableConfig =
-            {
-                id: dataModalId,
-                title: 'Contact Map',
-                selectionStyle: 'single',
-                pageLength: 10,
-                okHandler: async ([selection]) => {
-                    const {url, name} = selection
-                    await loadHandler(url, name, mapType)
-                }
+function configureAidenlabMapModal(targetID, loadHandler) {
+
+    const url = 'https://aidenlab.org/juicebox/res/hicfiles.json'
+
+    const config = {
+        url: url,
+        isJSON: true,
+        columns:
+            ['name', 'author', 'journal', 'year', 'organism', 'reference genome', 'cell type', 'experiment type', 'protocol'],
+
+        // Parser adds NVI parameter, if present,  to URL and insures that all columns have a value
+        parser: {
+            parse: str => {
+                return Object.entries(JSON.parse(str)).map(([url, obj]) => {
+                    obj['url'] = obj['NVI'] ? `${url}?nvi=${obj['NVI']}` : url
+                    for (let key of config.columns) {
+                        obj[key] = obj[key] || ''
+                    }
+                    return obj
+                })
             }
-        contactMapModal = new ModalTable(modalTableConfig)
-
-        const {items: path} = mapMenu
-        const config = aidenLabContactMapDatasourceConfigurator(path)
-        const datasource = new GenericDataSource(config)
-        contactMapModal.setDatasource(datasource)
+        }
     }
+    const datasource = new GenericDataSource(config)
 
+    const modalTableConfig =
+        {
+            id: targetID,
+            title: 'Contact Map',
+            selectionStyle: 'single',
+            pageLength: 10,
+            okHandler: async ([selection]) => {
+                const {url, name} = selection
+                await loadHandler(url, name, mapType)
+            }
+        }
+    const contactMapModal = new ModalTable(modalTableConfig)
+    contactMapModal.setDatasource(datasource)
+}
+
+function configureEncodeMapModal(targetID, loadHandler) {
+
+    const encodeContactMapDatasourceConfiguration = {
+        url: 'https://s3.amazonaws.com/igv.org.app/encode/hic/hic.txt',
+        columns:
+            [
+                // 'HREF',
+                'Assembly',
+                'Biosample',
+                'Description',
+                'BioRep',
+                'TechRep',
+                'Lab',
+                'Accession',
+                'Experiment'
+            ],
+    }
+    const datasource = new GenericDataSource(encodeContactMapDatasourceConfiguration)
 
     const encodeModalTableConfig =
         {
-            id: encodeHostedModalId,
+            id: targetID,
             title: 'ENCODE Hosted Contact Map',
             selectionStyle: 'single',
             pageLength: 10,
@@ -124,59 +114,41 @@ function configureContactMapLoaders({
                 await loadHandler(path, Description, mapType)
             }
         }
-
-    encodeHostedContactMapModal = new ModalTable(encodeModalTableConfig)
-
-    const datasource = new GenericDataSource(encodeContactMapDatasourceConfiguration)
-    encodeHostedContactMapModal.setDatasource(datasource)
-
+    new ModalTable(encodeModalTableConfig).setDatasource(datasource)
 }
 
+function configureFileInput(inputID, loadHandler) {
 
-function appendAndConfigureLoadURLModal(root, id, input_handler) {
+    $(inputID).on('change', async function (e) {
+        const file = ($(this).get(0).files)[0]
 
-    const html =
-        `<div id="${id}" class="modal fade">
-            <div class="modal-dialog  modal-lg">
-                <div class="modal-content">
+        // NOTE:  this in the callback is a DOM element, jquery weirdness
+        $(this).val("")
 
-                <div class="modal-header">
-                    <div class="modal-title">Load URL</div>
+        const {name} = file
+        await loadHandler(file, name, mapType)
+    })
+}
 
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+function configureLoadURLModal(id, loadHandler) {
 
-                </div>
-
-                <div class="modal-body">
-
-                    <div class="form-group">
-                        <input type="text" class="form-control" placeholder="Enter URL">
-                    </div>
-
-                </div>
-
-                </div>
-            </div>
-        </div>`;
-
-    $(root).append(html);
-
-    const $modal = $(root).find(`#${id}`);
+    const $modal = $(id)
     $modal.find('input').on('change', function () {
 
-        const path = $(this).val();
-        $(this).val("");
+        const path = $(this).val()
+        $(this).val("")
 
-        $(`#${id}`).modal('hide');
+        $modal.modal('hide')
 
-        input_handler(path);
+        loadHandler(path)
 
-
-    });
-
-    return html;
+    })
 }
 
-export default configureContactMapLoaders
+
+export {configureContactMapLoaders}
+
+
+
+
+

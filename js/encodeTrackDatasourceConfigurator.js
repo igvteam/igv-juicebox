@@ -90,32 +90,6 @@ function constructName(record) {
 
 }
 
-// Longer form of constructName, not currently used
-function _constructName(record) {
-    let name = record["Cell Type"] || "";
-
-    if (record["Target"]) {
-        name += " " + record["Target"];
-    }
-    if (record["AssayType"] && record["AssayType"].toLowerCase() !== "chip-seq") {
-        name += " " + record["AssayType"];
-    }
-    if (record["BioRep"]) {
-        name += " " + record["BioRep"];
-    }
-    if (record["TechRep"]) {
-        name += (record["BioRep"] ? ":" : " 0:") + record["TechRep"];
-    }
-    if (record["OutputType"]) {
-        name += " " + record["OutputType"];
-    }
-    if (record["Accession"]) {
-        name += " " + record["Accession"];
-    }
-    return name
-}
-
-
 function encodeSort(a, b) {
     var aa1,
         aa2,

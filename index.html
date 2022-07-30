@@ -3,6 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <title>IGV-JB</title>
+
+    <!-- Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+    <!-- DataTables CSS -->
+    <!--    <link rel="stylesheet" href="//cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css"/>-->
+    <link rel="stylesheet" type="text/css"
+          href="https://cdn.datatables.net/v/dt/dt-1.10.20/sl-1.3.1/datatables.min.css"/>
+
+    <!-- Bootstrap 4 and Dependancies -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+    <!-- Datatables JS -->
+    <!--    <script src="//cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>-->
+    <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.20/sl-1.3.1/datatables.min.js"></script>
+
     <!-- Font Awesome CSS-->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
 
@@ -12,320 +30,218 @@
 </head>
 <body>
 
-<h1>Demonstration of Juicebox <-> IGV interaction</h1>
+<h2>Demonstration of Juicebox <-> IGV interaction</h2>
 
-<b>
+
 <ul>
     <li>Navigation is synched</li>
-    <li>Cross hairs in JB => vertical bars in IGV  (hold shift key down and move mouse over JB for crosshairs)</li>
-    <li>"Project Contacts" => Contact records with significant counts represented as arcs in IGV</li>
+    <li>Cross hairs in JB => vertical bars in IGV (hold shift key down and move mouse over JB for crosshairs)</li>
+    <li>Click "Update Contacts" to send juicebox contact records with significant counts to IGV, represented as arcs.
+    </li>
 </ul>
-</b>
-<div>
-<button id="projectButton">Project contacts</button>
-</div>
-<div style="display:flex">
-    <div id="jbDiv"></div>
-    <div id="igvDiv" style="flex-grow:0;flex-shrink:0;flex-basis: 950px"></div>
-</div>
+
+
+<main id="hic-main" class="container-fluid">
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light ">
+
+        <!-- Contact Map -->
+        <div class="dropdown">
+
+            <button id="hic-contact-map-dropdown" class="btn btn-outline-dark btn-sm ml-2 dropdown-toggle" type="button"
+                    data-toggle="dropdown">
+                Load Map
+            </button>
+
+            <div id="hic-contact-map-dropdown-menu" class="dropdown-menu">
+
+                <!-- Select -->
+                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#hic-contact-map-modal">
+                    Juicebox Archive ...</a>
+
+                <!-- ENCODE hosted maps -->
+                <button id="hic-encode-hosted-contact-map-presentation-button" class="dropdown-item"
+                        type="button" data-toggle="modal" data-target="#hic-encode-hosted-contact-map-modal">ENCODE ...
+                </button>
+
+                <!-- Local Map File -->
+                <label class="dropdown-item btn btn-default btn-file">
+                    <div class="igv-app-dropdown-item-cloud-storage">
+                        <div>
+                            Local File ...
+                        </div>
+                        <div>
+                            <input id="contact-map-local" name="contact-map" type="file" style="display: none;">
+                        </div>
+                    </div>
+                </label>
+
+                <!-- URL -->
+                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#hic-load-url-modal">URL ...</a>
+            </div>
+
+        </div>
+
+        <!-- Track -->
+        <div class="dropdown">
+
+            <button id="hic-track-dropdown-button" class="btn btn-outline-dark btn-sm ml-2 dropdown-toggle"
+                    type="button"
+                    data-toggle="dropdown">
+                Load Tracks
+            </button>
+
+            <div id="hic-track-dropdown-menu" class="dropdown-menu">
+
+                <button id="encode-signal-tracks-button" class="dropdown-item"
+                        type="button" data-toggle="modal" data-target="#encode-signal-tracks-modal">ENCODE Signals ...
+                </button>
+
+                <button id="encode-other-tracks-button" class="dropdown-item"
+                        type="button" data-toggle="modal" data-target="#encode-other-tracks-modal">ENCODE Other ...
+                </button>
+
+
+                <!-- Local File -->
+                <label class="dropdown-item btn btn-default btn-file">
+                    <div class="igv-app-dropdown-item-cloud-storage">
+                        <div>
+                            Local File ...
+                        </div>
+                        <div>
+                            <input id="track-file-input" name="local-track-file" type="file"
+                                   style="display: none;">
+                        </div>
+                    </div>
+                </label>
+
+                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#track-load-url-modal">URL ...</a>
+
+            </div>
+
+        </div>
+
+        <!-- Share -->
+        <div title="Share">
+            <button id="share-button" class="btn btn-outline-dark btn-sm ml-2" type="button" data-toggle="modal"
+                    data-target="#app-share-modal">
+                Share
+            </button>
+        </div>
+
+        <button id="projectButton" class="btn btn-outline-dark btn-sm ml-5">Update Contacts</button>
+
+
+    </nav>
+
+    <!-- App container -->
+    <div class="row">
+        <div class="col-md-12">
+
+            <!-- app + caption container-->
+            <div id="app-caption" class="juicebox-app-caption-container">
+
+                <div style="display:flex">
+                    <div id="jbDiv"></div>
+                    <div id="igvDiv" style="flex-grow:0;flex-shrink:0;flex-basis: 950px"></div>
+                </div>
+
+                <!-- caption -->
+                <div id="hic-caption" class="hic-caption-container" contenteditable="true">
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Other dialogs -->
+    <div id="hic-load-url-modal" class="modal fade">
+        <div class="modal-dialog  modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Load URL</div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <input type="text" class="form-control" placeholder="Enter URL">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="track-load-url-modal" class="modal fade">
+        <div class="modal-dialog  modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Load URL</div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <input type="text" class="form-control" placeholder="Enter URL">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share URL Modal -->
+    <div id="app-share-modal" class="modal fade">
+
+        <div class="modal-dialog">
+
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <div id="app-share-input-modal-close-button" class="modal-title">Share</div>
+
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+                    <div class="container-fluid">
+
+                        <!-- copy url -->
+                        <div class="row">
+                            <div class="col-sm-8">
+                                <div class="form-group">
+                                    <input id="app-share-input" type="text" class="form-control" placeholder="">
+                                </div>
+                            </div>
+                            <div class="col-sm-2">
+                                <button id="app-copy-link-button" type="button" class="btn btn-sm btn-default">
+                                    COPY
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+</main>
 
 <script type="module">
 
-    import juicebox from "https://cdn.jsdelivr.net/npm/juicebox.js@2.2.2/dist/juicebox.esm.js"
-    import igv from "https://igv.org/web/snapshot/dist/igv.esm.js"
-    //import igv from "../../js/index.js"
-
-    const jbConfig = {
-        "url": "https://hicfiles.s3.amazonaws.com/hiseq/gm12878/dilution/combined.hic",
-        "name": "GM12878",
-        "state": "8,8,6,5019.8614387040925,5017.416175745596,640,640,1.7275014631202374,NONE",
-        "colorScale": "568,255,0,0",
-        "nvi": "11664249584,33929",
-        "tracks": [
-            {
-                "url": "https://www.encodeproject.org/files/ENCFF817TXQ/@@download/ENCFF817TXQ.bedpe.gz",
-                "name": "HAP-1 HiC",
-                "color": "rgb(180,25,137)"
-            }
-        ]
-    }
-
-    // Start igv.js and create regions
-    const igvConfig =
-        {
-            genome: "hg19",
-            locus: "chr8:125,435,405-133,904,633",
-            "tracks": [
-                {
-                    "url": "https://www.encodeproject.org/files/ENCFF000ARZ/@@download/ENCFF000ARZ.bigWig",
-                    "name": "H3K4me1 ",
-                    "min": 0,
-                    "max": 30,
-                    "color": "rgb(0,150,0)"
-                },
-                {
-                    "url": "https://www.encodeproject.org/files/ENCFF000ASF/@@download/ENCFF000ASF.bigWig",
-                    "name": "H3K4me3 ",
-                    "min": 0,
-                    "max": 30,
-                    "color": "rgb(0,150,0)"
-                },
-                {
-                    "url": "https://www.encodeproject.org/files/ENCFF000ASJ/@@download/ENCFF000ASJ.bigWig",
-                    "name": "H3K27ac ",
-                    "min": 0,
-                    "max": 30,
-                    "color": "rgb(200,0,0)"
-                },
-                {
-                    "url": "https://www.encodeproject.org/files/ENCFF000ARJ/@@download/ENCFF000ARJ.bigWig",
-                    "name": "CTCF ",
-                    "max": 30
-                },
-                {
-                    "name": "HAP-1 HiC",
-                    "url": "https://www.encodeproject.org/files/ENCFF817TXQ/@@download/ENCFF817TXQ.bedpe.gz",
-                    "metadata": {
-                        "Biosample": "Homo sapiens HAP-1",
-                        "AssayType": "HiC",
-                        "Target": "",
-                        "BioRep": "1,2,3",
-                        "TechRep": "1_1,1_2,1_3,2_1,3_1",
-                        "OutputType": "long range chromatin interactions",
-                        "Format": "bedpe",
-                        "Lab": "Erez Aiden, Baylor",
-                        "Accession": "ENCFF817TXQ",
-                        "Experiment": "ENCSR390HMC"
-                    },
-                    "format": "bedpe",
-                    "type": "interact",
-                    "color": "rgb(180,25,137)",
-                    "arcType": "nested",
-                    "arcOrientation": false,
-                    "thickness": 1,
-                    height: 180
-                }
-            ]
-        }
-
-    igv.createBrowser(document.getElementById("igvDiv"), igvConfig)
-
-        .then(async function (igvBrowser) {
-
-            // Add track for contact records, initially set to an empty array.
-            const interactionTrack = await igvBrowser.loadTrack({
-                id: "interactions",
-                type: "interact",
-                name: "Contacts",
-                //color: "rgba(180, 25, 137, 0.05)",
-                height: 125,
-                features: []    // ! Important, signals track that features will be supplied explicitly
-            })
-
-            juicebox.init(document.getElementById("jbDiv"), jbConfig)
-
-                .then(function (hicBrowser) {
-
-                    let igvLocusChangeTS = 0
-                    let jbLocusChageTS = 0
-
-                    // Callback for an IGV locus change
-                    const lcFn = referenceFrameList => {
-                        if (Date.now() - jbLocusChageTS < 1000) return
-                        igvLocusChangeTS = Date.now()
-                        const locusString = referenceFrameList.map(rf => `${rf.chr}:${Math.max(1, Math.ceil(rf.start))}-${Math.floor(rf.end)}`).join(' ')
-                        hicBrowser.parseGotoInput(locusString)
-                    }
-                    igvBrowser.on('locuschange', throttle(lcFn, 100))
-
-                    // Callback for a JB locus change
-                    hicBrowser.eventBus.subscribe("LocusChange", throttle(evt => {
-
-                        if (Date.now() - igvLocusChangeTS < 100) {
-                            return
-                        }
-
-                        jbLocusChageTS = Date.now()
-                        const gs1 = hicBrowser.genomicState('x')
-                        const gs2 = hicBrowser.genomicState('y')
-                        const chr1 = igvBrowser.genome.getChromosomeName(gs1.chromosome.name)
-                        const chr2 = igvBrowser.genome.getChromosomeName(gs2.chromosome.name)
-                        const start1 = Math.max(0, gs1.startBP)
-                        const start2 = Math.max(0, gs2.startBP)
-
-                        // Bug in juicebox genomic state
-                        const end1 = Math.min(gs1.endBP, gs1.chromosome.size)
-                        const end2 = Math.min(gs2.endBP, gs2.chromosome.size)
-
-                        const ss = Math.min(start1, start2)
-                        const ee = Math.max(end1, end2)
-
-                        const rf1 = igvBrowser.referenceFrameList.find(rf => rf.chr === chr1)
-                        const rf2 = igvBrowser.referenceFrameList.find(rf => rf.chr === chr2)
-
-                        if (rf1 && rf2) {
-
-                            const width = igvBrowser.calculateViewportWidth(igvBrowser.referenceFrameList.length)
-
-                            if (chr1 === chr2) {
-                                rf1.start = ss
-                                const bpp = (ee - ss) / width
-                                const r = bpp / rf1.bpPerPixel
-                                if (r > 1.05 || r < 0.95) {
-                                    rf1.bpPerPixel = bpp
-                                }
-                            } else {
-                                rf1.start = start1
-                                let bpp = (end1 - start1) / width
-                                let r = bpp / rf1.bpPerPixel
-                                if (r > 1.05 || r < 0.95) {
-                                    rf1.bpPerPixel = bpp
-                                }
-                                rf2.start = start2
-                                bpp = (end2 - start2) / width
-                                r = bpp / rf2.bpPerPixel
-                                if (r > 1.05 || r < 0.95) {
-                                    rf2.bpPerPixel = bpp
-                                }
-                            }
-
-                            igvBrowser.updateViews()
-                        } else {
-                            const locus = chr1 === chr2 ?
-                                `${chr1}:${ss + 1}-${ee}` :
-                                `${chr1}:${start1 + 1}-${end1} ${chr2}:${start2 + 1}-${end2}`
-                            igvBrowser.search(locus)
-                        }
-
-                    }), 1000)
-
-                    hicBrowser.setCustomCrosshairsHandler(s => {
-                        //console.log(s)
-                        const binSize = hicBrowser.getSyncState().binSize
-
-                        const gsx = hicBrowser.genomicState('x')
-                        const gsy = hicBrowser.genomicState('y')
-                        //console.log(gsx)
-
-                        const roi1 = {chr: gsx.chromosome.name, start: s.xBP - binSize / 2, end: s.xBP + binSize / 2}
-                        const roi2 = {chr: gsy.chromosome.name, start: s.yBP - binSize / 2, end: s.yBP + binSize / 2}
-                        igvBrowser.clearROIs()
-                        igvBrowser.loadROI({color: "rgba(50,0,250,0.2)", features: [roi1, roi2]})
-                    })
-                    // this.customCrosshairsHandler({
-                    //     xBP,
-                    //     yBP,
-                    //     startXBP,
-                    //     startYBP,
-                    //     endXBP,
-                    //     endYBP,
-                    //     interpolantX: xNormalized,
-                    //     interpolantY: yNormalized
-                    // });
-
-                    //hicBrowser.goto("8", 122660070, 131053694,"8", 122660070, 131053694, 25000)
-
-                    document.getElementById("projectButton").addEventListener("click", () => projectContacts())
-
-                    async function projectContacts() {
-                        const viewportWidth = hicBrowser.contactMatrixView.$viewport[0].clientWidth
-                        const {chr1Name, chr2Name, binSize, binX, binY, pixelSize} = hicBrowser.getSyncState()
-                        const widthInBP = viewportWidth * binSize / pixelSize
-                        const region1 = {chr: chr1Name, start: binX * binSize, end: binX * binSize + widthInBP}
-                        const region2 = {chr: chr2Name, start: binY * binSize, end: binY * binSize + widthInBP}
-                        const normalization = hicBrowser.state.normalization || "NONE"
-                        const records = await hicBrowser.dataset.getContactRecords(normalization, region1, region2, "BP", binSize)
-                        //console.log(records)
-
-                        // Count statistics
-                        const counts = []
-                        for (let rec of records) {
-                            if (Math.abs(rec.bin1 - rec.bin2) > 10) {
-                                counts.push(rec.counts)
-                            }
-                        }
-                        const threshold = percentile(counts, 98)
-
-                        const features = []
-                        for (let rec of records) {
-
-                            const {bin1, bin2, counts} = rec
-                            // Skip diagonal
-                            if (Math.abs(bin1 - bin2) <= 10) continue
-
-                            if (counts < threshold) continue
-
-                            const color = hicBrowser.contactMatrixView.colorScale.getColor(counts)
-                            const rgba = `rgba(${color.red},${color.green},${color.blue},${0.5 * color.alpha / 255})`
-
-                            features.push({
-                                chr1: igvBrowser.genome.getChromosomeName(chr1Name),
-                                start1: bin1 * binSize,
-                                end1: bin1 * binSize + binSize,
-                                chr2: igvBrowser.genome.getChromosomeName(chr2Name),
-                                start2: bin2 * binSize,
-                                end2: bin2 * binSize + binSize,
-                                color: rgba
-                            })
-                            if(chr1Name !== chr2Name) {
-                                features.push({
-                                    chr2: igvBrowser.genome.getChromosomeName(chr1Name),
-                                    start2: bin1 * binSize,
-                                    end2: bin1 * binSize + binSize,
-                                    chr1: igvBrowser.genome.getChromosomeName(chr2Name),
-                                    start1: bin2 * binSize,
-                                    end1: bin2 * binSize + binSize,
-                                    color: rgba
-                                })
-                            }
-
-                            for (let feature of features) {
-                                feature.chr = feature.chr1
-                                feature.start = Math.min(feature.start1, feature.start2)
-                                feature.end = Math.max(feature.end1, feature.end2)
-                            }
-                        }
-                        interactionTrack.featureSource.updateFeatures(features)
-                        interactionTrack.clearCachedFeatures()
-                        interactionTrack.updateViews()
-
-                    }
-                })
-
-        })
-
-    // Fast percentile function for "p" near edges.  This needs profiled for p in middle (e.g. median)
-    function percentile(array, p) {
-
-        if (array.length === 0) return undefined
-        var k = Math.floor(array.length * ((100 - p) / 100))
-
-        array.sort(function (a, b) {
-            return b - a
-        })
-        return array[k]
-
-    }
-
-    function throttle(callback, limit) {
-        let waiting = false                      // Initially, we're not waiting
-        return function () {                      // We return a throttled function
-            if (!waiting) {                       // If we're not waiting
-                callback.apply(this, arguments)  // Execute users function
-                waiting = true                   // Prevent future invocations
-                setTimeout(function () {          // After a period of time
-                    waiting = false              // And allow future invocations
-                }, limit)
-            }
-        }
-    }
-
-    // chr1Name: this.dataset.chromosomes[this.state.chr1].name,
-    //     chr2Name: this.dataset.chromosomes[this.state.chr2].name,
-    //     binSize: this.dataset.bpResolutions[this.state.zoom],
-    //     binX: this.state.x,            // TODO -- tranlsate to lower right corner
-    //     binY: this.state.y,
-    //     pixelSize: this.state.pixelSize
+    import {init} from "./js/init.js"
+    //import {init} from "./dist/igv-juicebox.js"
+    init(document.getElementById("jbDiv"), document.getElementById("igvDiv"), document.getElementById("projectButton"))
 
 
 </script>
