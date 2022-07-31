@@ -234,14 +234,39 @@
 
     </div>
 
+    <div style="width:600px;margin-top: 10px;margin-bottom: 10px">
+        <h3>Contact Parameters</h3>
+        <div class="form-group">
+            <label for="binThresholdInput">Off diagonal bin threshold</label>
+            <input type="text" class="form-control" id="binThresholdInput" aria-describedby="binThresholdHelp" placeholder="10" value="10">
+            <small id="binThresholdHelp" class="form-text text-muted">Contacts close to diagonal (abs(binX-binY) < threshold) are filtered.  </small>
+        </div>
+        <div class="form-group">
+            <label for="percentileThresholdInput">Percentile threshold</label>
+            <input type="text" class="form-control" id="percentileThresholdInput" aria-describedby="percentileThresholdHelp" placeholder="2" value="2">
+            <small id="percentileThresholdHelp" class="form-text text-muted">Contacts with counts in top "percentile thresold" are kept.  Value range 0-100.  </small>
+        </div>
+        <div class="form-group">
+            <label for="alphaModifierInput">Alpha modifier</label>
+            <input type="text" class="form-control" id="alphaModifierInput" aria-describedby="alphaModifierHelp" placeholder="0.5" value="0.5">
+            <small id="alphaModifierHelp" class="form-text text-muted">Use to adjust color intensity of IGV arcs.  Value range 0-1  Default = 0.5  </small>
+        </div>
+
+        <button type="button" class="btn btn-outline-dark btn-sm ml-2" id="contactParametersButton">Update Contacts</button>
+    </div>
 
 </main>
 
 <script type="module">
 
-    import {init} from "./js/init.js"
-    //import {init} from "./dist/igv-juicebox.js"
-    init(document.getElementById("jbDiv"), document.getElementById("igvDiv"), document.getElementById("projectButton"))
+    //import {init} from "./js/init.js"
+    import {init} from "./dist/igv-juicebox.js"
+    init({
+        jbContainer: document.getElementById("jbDiv"),
+        igvContainer: document.getElementById("igvDiv"),
+        projectContactsButton: document.getElementById("projectButton"),
+        contactsParametersButton: document.getElementById("contactParametersButton")
+    })
 
 
 </script>

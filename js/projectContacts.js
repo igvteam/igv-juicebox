@@ -5,7 +5,18 @@
  */
 
 
-export default async function projectContacts(hicBrowser, igvBrowser) {
+
+let diagonalBinThreshold = 10
+let percntileThreshold = 2
+let alphaModifier = 0.5
+
+function updateContactParameters(bThreshold, pThreshold, aModifier) {
+    diagonalBinThreshold = bThreshold
+    percntileThreshold = pThreshold
+    alphaModifier = aModifier
+}
+
+async function projectContacts(hicBrowser, igvBrowser) {
 
     const viewportWidth = hicBrowser.contactMatrixView.$viewport[0].clientWidth
     const {chr1Name, chr2Name, binSize, binX, binY, pixelSize} = hicBrowser.getSyncState()
@@ -19,23 +30,23 @@ export default async function projectContacts(hicBrowser, igvBrowser) {
     // Count statistics
     const counts = []
     for (let rec of records) {
-        if (Math.abs(rec.bin1 - rec.bin2) > 10) {
+        if (Math.abs(rec.bin1 - rec.bin2) > diagonalBinThreshold) {
             counts.push(rec.counts)
         }
     }
-    const threshold = percentile(counts, 98)
+    const threshold = percentile(counts, 100-percntileThreshold)
 
     const features = []
     for (let rec of records) {
 
         const {bin1, bin2, counts} = rec
         // Skip diagonal
-        if (Math.abs(bin1 - bin2) <= 10) continue
+        if (Math.abs(bin1 - bin2) <= diagonalBinThreshold) continue
 
         if (counts < threshold) continue
 
         const color = hicBrowser.contactMatrixView.colorScale.getColor(counts)
-        const rgba = `rgba(${color.red},${color.green},${color.blue},${0.5 * color.alpha / 255})`
+        const rgba = `rgba(${color.red},${color.green},${color.blue},${alphaModifier * color.alpha / 255})`
 
         features.push({
             chr1: igvBrowser.genome.getChromosomeName(chr1Name),
@@ -67,7 +78,7 @@ export default async function projectContacts(hicBrowser, igvBrowser) {
         }
     }
     const itracks = igvBrowser.findTracks("id", "jb-interactions")
-    if(itracks.length > 0) {
+    if (itracks.length > 0) {
         const interactionTrack = itracks[0]
         interactionTrack.featureSource.updateFeatures(features)
         interactionTrack.clearCachedFeatures()
@@ -87,3 +98,6 @@ function percentile(array, p) {
     return array[k]
 
 }
+
+
+export {projectContacts, updateContactParameters}
