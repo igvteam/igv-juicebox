@@ -13,7 +13,7 @@
   "devDependencies": {
     "data-modal": "github:igvteam/data-modal#v1.3.0",
     "igv-utils": "github:igvteam/igv-utils#v1.3.14",
-    "igv-widgets": "github:igvteam/igv-widgets",
+    "igv-widgets": "github:igvteam/igv-widgets#v1.4.2",
     "rollup": "^2.77.2"
   }
 }

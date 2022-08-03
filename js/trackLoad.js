@@ -1,5 +1,5 @@
 import {GenericDataSource, ModalTable} from '../node_modules/data-modal/dist/data-modal.js'
-import {encodeTrackDatasourceConfigurator, supportsGenome} from "./encodeTrackDatasourceConfigurator.js"
+import {encodeTrackDatasourceConfigurator, supportsGenome} from '../node_modules/igv-widgets/dist/igv-widgets.js'
 
 let encodeModals = new Map()
 
@@ -9,7 +9,8 @@ function configureTrackLoaders(hicBrowser, igvBrowser) {
         await igvBrowser.loadTrackList(configList)
     }
 
-    configureEncodeModal({targetID: 'encode-signal-tracks-modal', type: 'signals', genomeID: "hg19"}, loadHandler)
+    configureEncodeModal({targetID: 'encode-signal-chip-tracks-modal', type: 'signals-chip', genomeID: "hg19"}, loadHandler)
+    configureEncodeModal({targetID: 'encode-signal-other-tracks-modal', type: 'signals-other', genomeID: "hg19"}, loadHandler)
     configureEncodeModal({targetID: 'encode-other-tracks-modal', type: 'other', genomeID: "hg19"}, loadHandler)
     configureFileInput('#track-file-input', loadHandler)
     configureLoadURLModal('#track-load-url-modal', loadHandler)
